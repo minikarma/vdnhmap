@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8' />
+  <title>Display a map</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.js'></script>
+  <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.css' rel='stylesheet' />
+  <style>
+    body { margin:0; padding:0; }
+    #map { position:absolute; top:0; bottom:0; width:100%; }
+  </style>
+</head>
+<body>
+
+<div id='map'></div>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoidmRuaG1hcCIsImEiOiJjanU4ZnY5bHYxM3kzM3lrOWh2enl0MzBiIn0.xyvARfcr4SMjCbfUEmKBqQ';
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/vdnhmap/cjus6ztuh17cr1fo2f3xvkggl',
+  center: [37.634130, 55.827883],
+  zoom: 13.6
+});
+
+var popup = new mapboxgl.Popup({ closeOnClick: true }).addTo(map);
+//.setLngLat(coordinates)
+//.setHTML(description)
+
+
+map.on("load", ()=>{
+  fetch('./data/superpoi.geojson')
+  .then(response => {
+    return response.json();
+  })
+  .then(json => {
+
+    //добавляем данные как source
+    map.addSource("poi", { type: "geojson", data: json });
+
+    //чтобы добавить их на карту добавляем слой со стилем — мы выдадим вам примеры стилей каждого слоя, добавляемого динамически
+    map.addLayer({
+    "type":"symbol",
+    "source":"poi",
+    "id":"poi",
+      "layout": {
+        "icon-size": ["interpolate",["linear"],["zoom"],0,1,22,1],
+        "icon-image":["to-string",["get","icon"]],
+        "visibility":"visible"
+      },
+      "paint":{}
+    });
+
+    //как показать обработать клик и достать данные из объектов карты
+    map.on("click", (e)=>{
+      var bbox = [[e.point.x - 2, e.point.y - 2], [e.point.x + 2, e.point.y + 2]];
+      var features = map.queryRenderedFeatures(bbox, { layers: ['poi'] }); //здесь в layers, массив id слоёв которые нужно обрабатывать по клику
+      var coordinates = [e.lngLat.lng,e.lngLat.lat];
+      if(features.length) {
+        var description = features[0].properties.name_ru; //берём из данных объекта
+
+        //попап
+        popup.setLngLat(coordinates)
+            .setHTML(description)
+            .addTo(map);
+      }
+    });
+
+    //ховер по объектам на карте, смена курсора
+    map.on('mousemove', (e) => {
+      var bbox = [[e.point.x - 2, e.point.y - 2], [e.point.x + 2, e.point.y + 2]];
+      var features = map.queryRenderedFeatures(bbox, { layers: ['poi'] }); //здесь в layers, массив id слоёв которые нужно обрабатывать по клику
+      map.getCanvas().style.cursor = features.length ? 'pointer' : '';
+    });
+
+  });
+});
+
+
+</script>
+
+</body>
+</html>

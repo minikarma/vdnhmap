@@ -27,6 +27,24 @@ var popup = new mapboxgl.Popup({ closeOnClick: true }).addTo(map);
 //.setLngLat(coordinates)
 //.setHTML(description)
 
+getRoute = (from,to) => {
+  //https://api.mapbox.com/directions/v5/mapbox/walking/-73.989%2C40.733%3B-74%2C40.733.json?access_token=pk.eyJ1IjoidXJiaWNhIiwiYSI6ImNpamFhZXNkOTAwMnp2bGtxOTFvMTNnNjYifQ.jUuvgnxQCuUBUpJ_k7xtkQ
+
+  //урл запроса
+  var url = 'https://api.mapbox.com/directions/v5/mapbox/walking/'+ from.join(",") +';'+ to.join(",") +'.json?overview=full&geometries=geojson&access_token=pk.eyJ1IjoidXJiaWNhIiwiYSI6ImNpamFhZXNkOTAwMnp2bGtxOTFvMTNnNjYifQ.jUuvgnxQCuUBUpJ_k7xtkQ';
+  fetch(url)
+    .then(response => {
+      return response.json();
+    })
+    .then(json => {
+      if(json.routes.length) {
+        //применяем данные геометрии маршрута к сорсу
+        map.getSource("route").setData({type: "FeatureCollection", features: [{type: "Feature", geometry: json.routes[0].geometry }]})
+      }
+
+    });
+}
+
 
 map.on("load", ()=>{
   fetch('./data/superpoi.geojson')
@@ -37,6 +55,20 @@ map.on("load", ()=>{
 
     //добавляем данные как source
     map.addSource("poi", { type: "geojson", data: json });
+
+    //пустой сорс c линией маршрута
+    map.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+
+    //линия маршрута — стиль
+    map.addLayer({
+      "id": "route",
+      "source": "route",
+      "type": "line",
+      "paint": {
+        "line-width": 2,
+        "line-color": "#333"
+      }
+    });
 
     //чтобы добавить их на карту добавляем слой со стилем — мы выдадим вам примеры стилей каждого слоя, добавляемого динамически
     map.addLayer({
@@ -51,6 +83,8 @@ map.on("load", ()=>{
       "paint":{}
     });
 
+
+
     //как показать обработать клик и достать данные из объектов карты
     map.on("click", (e)=>{
       var bbox = [[e.point.x - 2, e.point.y - 2], [e.point.x + 2, e.point.y + 2]];
@@ -63,6 +97,10 @@ map.on("load", ()=>{
         popup.setLngLat(coordinates)
             .setHTML(description)
             .addTo(map);
+
+        //строим маршрут
+        getRoute([37.63761234487302,55.826281720864401], coordinates);
+
       }
     });
 
